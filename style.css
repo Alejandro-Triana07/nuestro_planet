@@ -1022,24 +1022,292 @@ body.light .icon-moon { display: none; }
 .app-footer a { color: var(--accent); }
 
 /* ══════════════════════════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE — Mobile-first, todos los dispositivos
+   Breakpoints:
+     xs  — hasta 359px   (smartwatch / móvil muy pequeño)
+     sm  — hasta 479px   (móvil pequeño: iPhone SE, Galaxy A)
+     md  — hasta 767px   (móvil normal: iPhone 14, Pixel)
+     lg  — hasta 1023px  (tablet: iPad, Galaxy Tab)
+     xl  — hasta 1279px  (tablet grande / laptop pequeño)
+     2xl — 1280px+        (desktop / TV)
 ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  .app-header { padding: 0.6rem 1rem; }
-  .hero-overlay { padding: 0 1.25rem 3.5rem; }
-  .hero-title { font-size: clamp(3rem, 12vw, 4.5rem); }
-  .main-content { padding: 0 1rem 3rem; }
-  .detail-card { grid-template-columns: 1fr; }
-  .detail-poster { max-width: 160px; }
-  .person-detail { grid-template-columns: 1fr; }
-  .person-detail__photo { max-width: 140px; }
-  .main-nav { width: 100%; border-radius: var(--radius); }
+
+/* ── Base: todos los tamaños parten de aquí ─────────────────── */
+
+/* Aseguramos que el gate nunca desborde */
+.api-gate { padding: 1rem; }
+.api-gate__card { padding: 2rem 1.5rem 1.75rem; }
+
+/* El nav siempre se adapta al ancho disponible */
+.main-nav {
+  width: 100%;
+  border-radius: var(--radius);
+  justify-content: flex-start;
 }
 
-@media (max-width: 480px) {
-  .hero-actions { flex-direction: column; align-items: flex-start; }
-  .person-grid  { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
-  .video-grid   { grid-template-columns: 1fr; }
+/* Las tarjetas de detalle en columna por defecto (mobile-first) */
+.detail-card        { grid-template-columns: 1fr; }
+.person-detail      { grid-template-columns: 1fr; }
+
+/* Textos fluidos con clamp para evitar overflow en cualquier pantalla */
+.hero-title         { font-size: clamp(2.6rem, 10vw, 6.5rem); }
+.detail-title       { font-size: clamp(1.4rem, 5vw, 2rem); }
+.section-header h2  { font-size: clamp(1.3rem, 5vw, 1.8rem); }
+
+/* Iframes de vídeo siempre dentro del viewport */
+.video-card iframe  { width: 100%; min-width: 0; }
+
+/* Scrollers horizontales: snap suave en táctil */
+.gallery-scroller,
+.poster-scroller {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.gallery-card,
+.poster-card { scroll-snap-align: start; }
+
+/* ── xs — hasta 359px (smartwatch / móvil muy pequeño) ─────── */
+@media (max-width: 359px) {
+  /* Gate */
+  .api-gate__card       { padding: 1.5rem 1rem 1.25rem; border-radius: var(--radius); }
+  .api-gate__title      { font-size: 2rem; }
+  .logo-mark            { width: 48px; height: 48px; font-size: 1.1rem; }
+
+  /* Header */
+  .app-header           { padding: 0.5rem 0.75rem; gap: 0.4rem; }
+  .brand-title          { font-size: 1rem; }
+  .brand-sub            { display: none; }
+  .logo-mark--sm        { width: 30px; height: 30px; font-size: 0.75rem; }
+
+  /* Hero */
+  .hero                 { min-height: 70vh; }
+  .hero-overlay         { padding: 0 0.75rem 2.5rem; }
+  .hero-title           { font-size: clamp(2.2rem, 14vw, 3rem); line-height: 0.92; }
+  .hero-eyebrow         { font-size: 0.68rem; }
+  .hero-meta            { font-size: 0.75rem; }
+  .hero-overview        { font-size: 0.82rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .hero-actions         { flex-direction: column; gap: 0.5rem; }
+  .btn                  { padding: 0.65rem 1rem; font-size: 0.82rem; }
+
+  /* Nav */
+  .main-content         { padding: 0 0.75rem 2rem; }
+  .main-nav             { padding: 0.35rem; gap: 0.2rem; overflow-x: auto; flex-wrap: nowrap; }
+  .nav-btn              { padding: 0.4rem 0.7rem; font-size: 0.75rem; white-space: nowrap; flex-shrink: 0; }
+
+  /* Cards */
+  .form-container       { padding: 0.9rem 0.85rem; }
+  .detail-card          { padding: 1rem; gap: 0.75rem; }
+  .detail-poster        { max-width: 120px; }
+  .info-grid            { grid-template-columns: 1fr; }
+
+  /* Episodios */
+  .episodes-grid        { grid-template-columns: 1fr; gap: 0.5rem; }
+  .episode-card         { padding: 0.7rem 0.8rem; }
+
+  /* Galería */
+  .gallery-card         { width: 220px; }
+  .gallery-img          { height: 130px; }
+
+  /* Vídeos */
+  .video-grid           { grid-template-columns: 1fr; gap: 0.75rem; }
+
+  /* Personas */
+  .person-grid          { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .person-detail        { padding: 1rem; gap: 0.75rem; }
+  .person-detail__name  { font-size: 1.3rem; }
+
+  /* Pósters similares */
+  .poster-card          { width: 110px; }
+
+  /* Footer */
+  .app-footer           { padding: 0.9rem 0.75rem; font-size: 0.72rem; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+  .app-footer span + span { display: none; } /* oculta separadores */
+}
+
+/* ── sm — hasta 479px (móvil pequeño) ──────────────────────── */
+@media (min-width: 360px) and (max-width: 479px) {
+  /* Gate */
+  .api-gate__card       { padding: 2rem 1.25rem 1.75rem; }
+  .api-gate__title      { font-size: 2.4rem; }
+
+  /* Header */
+  .app-header           { padding: 0.55rem 1rem; }
+  .brand-sub            { font-size: 0.65rem; }
+
+  /* Hero */
+  .hero                 { min-height: 72vh; }
+  .hero-overlay         { padding: 0 1rem 3rem; }
+  .hero-title           { font-size: clamp(2.6rem, 13vw, 3.6rem); }
+  .hero-overview        { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .hero-actions         { flex-direction: column; gap: 0.5rem; }
+  .btn                  { width: fit-content; }
+
+  /* Nav */
+  .main-content         { padding: 0 1rem 2.5rem; }
+  .main-nav             { overflow-x: auto; flex-wrap: nowrap; padding: 0.4rem; }
+  .nav-btn              { flex-shrink: 0; white-space: nowrap; font-size: 0.78rem; padding: 0.42rem 0.85rem; }
+
+  /* Cards */
+  .detail-card          { padding: 1rem; gap: 1rem; }
+  .detail-poster        { max-width: 140px; }
+  .info-grid            { grid-template-columns: 1fr; }
+
+  /* Episodios */
+  .episodes-grid        { grid-template-columns: 1fr; }
+
+  /* Galería */
+  .gallery-card         { width: 240px; }
+
+  /* Vídeos */
+  .video-grid           { grid-template-columns: 1fr; }
+
+  /* Personas */
+  .person-grid          { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+  .person-detail        { gap: 1rem; padding: 1.1rem; }
+
+  /* Pósters similares */
+  .poster-card          { width: 125px; }
+
+  /* Footer */
+  .app-footer           { padding: 1rem; font-size: 0.75rem; }
+}
+
+/* ── md — hasta 767px (móvil normal) ───────────────────────── */
+@media (min-width: 480px) and (max-width: 767px) {
+  /* Header */
+  .app-header           { padding: 0.6rem 1.25rem; }
+
+  /* Hero */
+  .hero                 { min-height: 78vh; }
+  .hero-overlay         { padding: 0 1.25rem 3.5rem; }
+  .hero-title           { font-size: clamp(3rem, 11vw, 4.5rem); }
+  .hero-overview        { max-width: 100%; }
+
+  /* Nav */
+  .main-content         { padding: 0 1.25rem 3rem; }
+  .main-nav             { overflow-x: auto; flex-wrap: nowrap; }
+  .nav-btn              { flex-shrink: 0; white-space: nowrap; }
+
+  /* Cards */
+  .detail-card          { padding: 1.25rem; gap: 1.25rem; }
+  .detail-poster        { max-width: 160px; }
+  .info-grid            { grid-template-columns: 1fr 1fr; }
+
+  /* Episodios */
+  .episodes-grid        { grid-template-columns: 1fr; }
+
+  /* Galería */
+  .gallery-card         { width: 260px; }
+
+  /* Vídeos */
+  .video-grid           { grid-template-columns: 1fr; }
+
+  /* Personas */
+  .person-grid          { grid-template-columns: repeat(3, 1fr); }
+  .person-detail        { gap: 1.25rem; }
+
+  /* Footer */
+  .app-footer           { padding: 1rem 1.25rem; }
+}
+
+/* ── lg — hasta 1023px (tablet) ────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Header */
+  .app-header           { padding: 0.65rem 1.5rem; }
+
+  /* Hero */
+  .hero                 { min-height: 82vh; }
+  .hero-overlay         { padding: 0 3vw 4.5rem; }
+
+  /* Nav: ya cabe en una línea, recuperamos estilo pill */
+  .main-nav             { width: fit-content; border-radius: var(--radius-full); flex-wrap: wrap; }
+
+  /* Main */
+  .main-content         { padding: 0 2vw 3rem; }
+
+  /* Cards: vuelven a ser de dos columnas en tablet */
+  .detail-card          { grid-template-columns: 180px 1fr; gap: 1.5rem; }
+  .detail-poster        { max-width: 100%; }
+  .info-grid            { grid-template-columns: 1fr 1fr; }
+
+  /* Person detail */
+  .person-detail        { grid-template-columns: 160px 1fr; }
+
+  /* Vídeos */
+  .video-grid           { grid-template-columns: repeat(2, 1fr); }
+
+  /* Personas */
+  .person-grid          { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ── xl — hasta 1279px (tablet grande / laptop) ─────────────── */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .main-content         { padding: 0 3vw 3rem; }
+  .detail-card          { grid-template-columns: 190px 1fr; }
+  .info-grid            { grid-template-columns: 1fr 1fr; }
+  .person-grid          { grid-template-columns: repeat(5, 1fr); }
+  .video-grid           { grid-template-columns: repeat(2, 1fr); }
+  .person-detail        { grid-template-columns: 175px 1fr; }
+}
+
+/* ── 2xl — 1280px+ (desktop / TV) ──────────────────────────── */
+@media (min-width: 1280px) {
+  .main-content         { padding: 0 4vw 4rem; max-width: 1600px; margin-inline: auto; }
+  .detail-card          { grid-template-columns: 200px 1fr; }
+  .info-grid            { grid-template-columns: repeat(4, 1fr); }
+  .person-grid          { grid-template-columns: repeat(6, 1fr); }
+  .video-grid           { grid-template-columns: repeat(3, 1fr); }
+  .person-detail        { grid-template-columns: 180px 1fr; }
+  .episodes-grid        { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ── 3xl — 1920px+ (pantallas grandes / TV 4K) ──────────────── */
+@media (min-width: 1920px) {
+  :root                 { font-size: 18px; }
+  .main-content         { max-width: 1800px; }
+  .hero-title           { font-size: clamp(5rem, 6vw, 8rem); }
+  .person-grid          { grid-template-columns: repeat(8, 1fr); }
+  .info-grid            { grid-template-columns: repeat(4, 1fr); }
+  .gallery-card         { width: 380px; }
+  .gallery-img          { height: 215px; }
+  .poster-card          { width: 175px; }
+}
+
+/* ── Reducción de movimiento (accesibilidad) ────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .api-gate__orb        { animation: none; }
+  .eyebrow-dot          { animation: none; }
+}
+
+/* ── Pantallas de alta densidad (Retina) ────────────────────── */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .api-gate__card       { box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.06); }
+}
+
+/* ── Dispositivos en landscape (móvil girado) ───────────────── */
+@media (max-width: 900px) and (orientation: landscape) {
+  .hero                 { min-height: 100vw; }
+  .hero-overlay         { padding: 0 5vw 2.5rem; align-items: center; }
+  .hero-content         { max-width: 55vw; }
+  .hero-overview        { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .hero-actions         { flex-direction: row; }
+  .api-gate             { align-items: flex-start; overflow-y: auto; padding-top: 1rem; }
+  .api-gate__card       { margin: auto; }
+}
+
+/* ── Hover solo en dispositivos con puntero fino (no táctil) ── */
+@media (hover: none) {
+  .poster-card:hover,
+  .gallery-card:hover,
+  .person-card:hover,
+  .episode-card:hover,
+  .video-card:hover,
+  .btn:hover,
+  .nav-btn:hover        { transform: none; box-shadow: none; filter: none; }
 }
 
 /* ── Transición de entrada del app ──────────────────────────── */
@@ -1047,4 +1315,23 @@ body.light .icon-moon { display: none; }
 @keyframes appFadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+/* ── Safe area para iPhone con notch / Dynamic Island ───────── */
+@supports (padding: env(safe-area-inset-left)) {
+  .app-header {
+    padding-left:  max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+  .main-content {
+    padding-left:  max(4vw, env(safe-area-inset-left));
+    padding-right: max(4vw, env(safe-area-inset-right));
+  }
+  .hero-overlay {
+    padding-left:  max(4vw, env(safe-area-inset-left));
+    padding-right: max(4vw, env(safe-area-inset-right));
+  }
+  .app-footer {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
 }

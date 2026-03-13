@@ -3,90 +3,129 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nuestro planeta - Explorador TMDB</title>
+    <title>Nuestro Planeta — Explorador TMDB</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <header class="app-header">
-      <div class="brand">
-        <h1>NUESTRO PLANETA</h1>
-        <p class="subtitle">
-          Explorador TMDB
-          <strong>"Nuestro planeta"</strong>.
-        </p>
-      </div>
-      <div class="header-controls">
-        <div class="api-key-input">
-          <label for="apiKey">API Key TMDB:</label>
-          <input
-            type="password"
-            id="apiKey"
-            placeholder="Introduce tu API Key de TMDB"
-          />
-          <button id="saveApiKeyBtn">Guardar</button>
-        </div>
-        <button id="themeToggleBtn" class="theme-toggle">Modo neón</button>
-      </div>
-    </header>
 
-    <main class="layout">
-      <section id="hero" class="hero">
-        <!-- El fondo, título y datos principales de la serie se cargan dinámicamente desde TMDB -->
-        <div class="hero-overlay">
-          <div class="hero-content">
-            <p class="hero-tagline">Una sola serie. Un planeta completo.</p>
-            <h2 class="hero-title">Nuestro planeta</h2>
-            <p class="hero-meta" id="heroMeta"></p>
-            <p class="hero-overview" id="heroOverview"></p>
-            <div class="hero-actions">
-              <button class="btn btn-primary" data-view="overview">
-                Ver información general
-              </button>
-              <button class="btn btn-secondary" data-view="seasons">
-                Ver temporadas y episodios
-              </button>
-            </div>
+    <!-- ── PANTALLA DE BIENVENIDA / API KEY ────────────────────────── -->
+    <div id="apiGate" class="api-gate">
+      <div class="api-gate__bg">
+        <div class="api-gate__orb api-gate__orb--1"></div>
+        <div class="api-gate__orb api-gate__orb--2"></div>
+        <div class="api-gate__orb api-gate__orb--3"></div>
+      </div>
+      <div class="api-gate__card">
+        <div class="api-gate__logo">
+          <span class="logo-mark">NP</span>
+        </div>
+        <h1 class="api-gate__title">Nuestro Planeta</h1>
+        <p class="api-gate__sub">Explorador de la serie — TMDB API</p>
+        <p class="api-gate__desc">
+          Introduce tu API Key de TMDB para comenzar.<br />
+          Puedes obtenerla gratis en
+          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org</a>.
+        </p>
+        <div class="api-gate__form">
+          <div class="input-wrap">
+            <input
+              type="password"
+              id="gateApiKey"
+              class="api-gate__input"
+              placeholder="Pega aquí tu API Key de TMDB…"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="gateToggleVisible" class="input-eye" title="Mostrar / ocultar clave" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <button id="gateEnterBtn" class="api-gate__btn" type="button">
+            <span>Entrar</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+        <p id="gateError" class="api-gate__error" hidden>API Key inválida o error de conexión. Revísala e inténtalo de nuevo.</p>
+        <p class="api-gate__hint">La clave se guarda solo en tu navegador (localStorage).</p>
+      </div>
+    </div>
+
+    <!-- ── APP PRINCIPAL ───────────────────────────────────────────── -->
+    <div id="appRoot" class="app-root" hidden>
+
+      <header class="app-header">
+        <div class="header-brand">
+          <span class="logo-mark logo-mark--sm">NP</span>
+          <div>
+            <span class="brand-title">Nuestro Planeta</span>
+            <span class="brand-sub">Explorador TMDB</span>
           </div>
         </div>
-      </section>
+        <div class="header-right">
+          <button id="themeToggleBtn" class="icon-btn" title="Cambiar tema">
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button id="logoutBtn" class="icon-btn icon-btn--danger" title="Cerrar sesión / cambiar API Key">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
+      </header>
 
-      <section class="main-content">
-        <nav class="main-menu">
-          <button data-view="overview" class="nav-btn">
-            Información general
-          </button>
-          <button data-view="seasons" class="nav-btn">
-            Temporadas y episodios
-          </button>
-          <button data-view="gallery" class="nav-btn">
-            Galería de imágenes
-          </button>
-          <button data-view="videos" class="nav-btn">
-            Tráilers y vídeos
-          </button>
-          <button data-view="people" class="nav-btn">
-            Reparto y equipo
-          </button>
-          <button data-view="more-like-this" class="nav-btn">
-            Más como esta
-          </button>
-        </nav>
+      <main class="layout">
+        <!-- HERO -->
+        <section id="hero" class="hero">
+          <div class="hero-overlay">
+            <div class="hero-content">
+              <p class="hero-eyebrow">
+                <span class="eyebrow-dot"></span>Netflix Original · Documental
+              </p>
+              <h2 class="hero-title">Nuestro<br/>Planeta</h2>
+              <p class="hero-meta" id="heroMeta"></p>
+              <p class="hero-overview" id="heroOverview"></p>
+              <div class="hero-actions">
+                <button class="btn btn-primary" data-view="overview">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  Ver información
+                </button>
+                <button class="btn btn-ghost" data-view="seasons">
+                  Temporadas
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="hero-fade-bottom"></div>
+        </section>
 
-        <section id="messages" class="messages"></section>
+        <!-- NAV + CONTENIDO -->
+        <div class="main-content">
+          <nav class="main-nav" role="navigation" aria-label="Secciones">
+            <button data-view="overview"       class="nav-btn">Información</button>
+            <button data-view="seasons"        class="nav-btn">Temporadas</button>
+            <button data-view="gallery"        class="nav-btn">Galería</button>
+            <button data-view="videos"         class="nav-btn">Vídeos</button>
+            <button data-view="people"         class="nav-btn">Reparto</button>
+            <button data-view="more-like-this" class="nav-btn">Similares</button>
+          </nav>
 
-        <section id="formContainer" class="form-container"></section>
+          <div id="messages" class="messages" role="alert" aria-live="polite"></div>
+          <div id="formContainer" class="form-container"></div>
+          <div id="results"       class="results"></div>
+        </div>
+      </main>
 
-        <section id="results" class="results"></section>
-      </section>
-    </main>
+      <footer class="app-footer">
+        <span>Datos provistos por</span>
+        <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">The Movie Database</a>
+        <span>·</span>
+        <span>Serie «Nuestro Planeta» · Solo para uso educativo</span>
+      </footer>
 
-    <footer class="app-footer">
-      <p>
-        Ejercicio de programación - Uso de la API de TMDB - Serie "Nuestro planeta".
-      </p>
-    </footer>
+    </div><!-- /appRoot -->
 
     <script src="main.js" defer></script>
   </body>
-  </html>
-
+</html>

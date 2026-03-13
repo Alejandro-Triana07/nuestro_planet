@@ -1,113 +1,227 @@
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
-const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w300";
-const TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w1280";
-const DEFAULT_LANGUAGE = "es-ES";
+// ─────────────────────────────────────────────────────────────────────────────
+// main.js — Explorador TMDB · Serie "Nuestro Planeta"
+// La API Key NO está en el código: se pide al usuario en la pantalla de entrada
+// y se guarda en localStorage. La app muestra exclusivamente datos de la serie
+// "Nuestro Planeta" (TMDB ID 83880).
+// ─────────────────────────────────────────────────────────────────────────────
 
+const TMDB_BASE_URL     = "https://api.themoviedb.org/3";
+const TMDB_IMAGE_BASE   = "https://image.tmdb.org/t/p/w300";
+const TMDB_BACKDROP_BASE= "https://image.tmdb.org/t/p/w1280";
+const DEFAULT_LANGUAGE  = "es-ES";
 const NUESTRO_PLANETA_TV_ID = 83880;
+const LS_API_KEY        = "tmdb_api_key";
+const LS_THEME          = "tmdb_theme";
 
-const TMDB_API_KEY = "b2b5b414609685cb8e24e2fd7d23c9af";
-
+// ── Referencias DOM ──────────────────────────────────────────────────────────
+const apiGateEl      = document.getElementById("apiGate");
+const appRootEl      = document.getElementById("appRoot");
+const gateApiKeyEl   = document.getElementById("gateApiKey");
+const gateEnterBtn   = document.getElementById("gateEnterBtn");
+const gateErrorEl    = document.getElementById("gateError");
+const gateToggleBtn  = document.getElementById("gateToggleVisible");
 const themeToggleBtn = document.getElementById("themeToggleBtn");
-const messagesEl = document.getElementById("messages");
-const formContainer = document.getElementById("formContainer");
-const resultsEl = document.getElementById("results");
-const heroEl = document.getElementById("hero");
-const heroMetaEl = document.getElementById("heroMeta");
+const logoutBtn      = document.getElementById("logoutBtn");
+const messagesEl     = document.getElementById("messages");
+const formContainer  = document.getElementById("formContainer");
+const resultsEl      = document.getElementById("results");
+const heroEl         = document.getElementById("hero");
+const heroMetaEl     = document.getElementById("heroMeta");
 const heroOverviewEl = document.getElementById("heroOverview");
 
 let navButtons = document.querySelectorAll(".nav-btn");
 
-let tvDetailsCache = null;
-let creditsCache = null;
-let imagesCache = null;
-let videosCache = null;
+// ── Estado ───────────────────────────────────────────────────────────────────
+let TMDB_API_KEY = "";
+
+// Caché en memoria para evitar peticiones repetidas
+let tvDetailsCache  = null;
+let creditsCache    = null;
+let imagesCache     = null;
+let videosCache     = null;
 let genresListCache = null;
-const peopleCache = new Map();
+const peopleCache   = new Map();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INICIALIZACIÓN
+// ─────────────────────────────────────────────────────────────────────────────
 function init() {
-  const storedTheme = window.localStorage.getItem("theme") || "light";
-  applyTheme(storedTheme);
+  applyTheme(localStorage.getItem(LS_THEME) || "dark");
 
+  // Si ya hay una API Key guardada, saltar la pantalla de entrada
+  const savedKey = localStorage.getItem(LS_API_KEY);
+  if (savedKey) {
+    TMDB_API_KEY = savedKey;
+    showApp();
+  } else {
+    showGate();
+  }
+
+  // Listeners del gate
+  gateEnterBtn.addEventListener("click", handleGateEnter);
+  gateApiKeyEl.addEventListener("keydown", (e) => { if (e.key === "Enter") handleGateEnter(); });
+  gateToggleBtn.addEventListener("click", () => {
+    gateApiKeyEl.type = gateApiKeyEl.type === "password" ? "text" : "password";
+  });
+
+  // Listeners del app
   themeToggleBtn.addEventListener("click", toggleTheme);
+  logoutBtn.addEventListener("click", handleLogout);
 
-  document
-    .querySelectorAll("[data-view]")
-    .forEach((btn) =>
-      btn.addEventListener("click", () => changeView(btn.dataset.view))
-    );
+  document.querySelectorAll("[data-view]").forEach((btn) =>
+    btn.addEventListener("click", () => changeView(btn.dataset.view))
+  );
 
   navButtons = document.querySelectorAll(".nav-btn");
+}
 
+// ── Gate: validar API Key ─────────────────────────────────────────────────────
+async function handleGateEnter() {
+  const key = gateApiKeyEl.value.trim();
+  if (!key) {
+    gateErrorEl.textContent = "Introduce una API Key antes de continuar.";
+    gateErrorEl.hidden = false;
+    return;
+  }
+
+  gateEnterBtn.disabled = true;
+  gateEnterBtn.querySelector("span").textContent = "Verificando…";
+  gateErrorEl.hidden = true;
+
+  // Validamos haciendo una petición real de bajo coste
+  const ok = await validateApiKey(key);
+
+  if (ok) {
+    TMDB_API_KEY = key;
+    localStorage.setItem(LS_API_KEY, key);
+    // Animación de salida del gate y entrada del app
+    apiGateEl.classList.add("is-exiting");
+    setTimeout(() => {
+      apiGateEl.style.display = "none";
+      showApp();
+    }, 500);
+  } else {
+    gateErrorEl.textContent = "API Key inválida o error de conexión. Revísala e inténtalo de nuevo.";
+    gateErrorEl.hidden = false;
+    gateEnterBtn.disabled = false;
+    gateEnterBtn.querySelector("span").textContent = "Entrar";
+  }
+}
+
+async function validateApiKey(key) {
+  try {
+    const url = new URL(`${TMDB_BASE_URL}/genre/tv/list`);
+    url.searchParams.set("api_key", key);
+    url.searchParams.set("language", DEFAULT_LANGUAGE);
+    const res = await fetch(url.toString());
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ── Mostrar / ocultar pantallas ───────────────────────────────────────────────
+function showGate() {
+  apiGateEl.style.display = "";
+  apiGateEl.hidden = false;
+  appRootEl.hidden  = true;
+}
+
+function showApp() {
+  apiGateEl.hidden = true;
+  appRootEl.hidden = false;
   loadHero().catch(() => {});
   changeView("overview");
 }
 
-function showMessage(text, type = "info") {
-  messagesEl.innerHTML = "";
-  if (!text) return;
-  const div = document.createElement("div");
-  div.className = `alert alert-${type}`;
-  div.textContent = text;
-  messagesEl.appendChild(div);
+function handleLogout() {
+  localStorage.removeItem(LS_API_KEY);
+  TMDB_API_KEY = "";
+  // Limpia caché para que el siguiente usuario empiece limpio
+  tvDetailsCache = creditsCache = imagesCache = videosCache = genresListCache = null;
+  peopleCache.clear();
+  // Regresa a la pantalla de entrada
+  apiGateEl.classList.remove("is-exiting");
+  apiGateEl.style.display = "";
+  apiGateEl.hidden = false;
+  appRootEl.hidden = true;
+  gateApiKeyEl.value = "";
+  gateErrorEl.hidden = true;
+  gateEnterBtn.disabled = false;
+  gateEnterBtn.querySelector("span").textContent = "Entrar";
 }
 
-function clearResults() {
-  resultsEl.innerHTML = "";
-}
-
+// ── Tema ──────────────────────────────────────────────────────────────────────
 function applyTheme(theme) {
-  const isDarkVariant = theme === "dark";
-  document.body.classList.toggle("dark", isDarkVariant);
-  themeToggleBtn.textContent = isDarkVariant ? "Modo cian" : "Modo violeta";
-  window.localStorage.setItem("theme", isDarkVariant ? "dark" : "light");
+  document.body.classList.toggle("light", theme === "light");
+  localStorage.setItem(LS_THEME, theme);
 }
 
 function toggleTheme() {
-  const current = document.body.classList.contains("dark") ? "dark" : "light";
-  const next = current === "dark" ? "light" : "dark";
-  applyTheme(next);
+  const current = document.body.classList.contains("light") ? "light" : "dark";
+  applyTheme(current === "light" ? "dark" : "light");
 }
 
+// ── Navegación ────────────────────────────────────────────────────────────────
 function setActiveNav(view) {
-  navButtons.forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.view === view);
-  });
+  navButtons.forEach((btn) =>
+    btn.classList.toggle("active", btn.dataset.view === view)
+  );
 }
 
+function changeView(view) {
+  setActiveNav(view);
+  messagesEl.innerHTML  = "";
+  formContainer.innerHTML = "";
+  clearResults();
+
+  switch (view) {
+    case "overview":       renderOverviewView();      break;
+    case "seasons":        renderSeasonsView();       break;
+    case "gallery":        renderGalleryView();       break;
+    case "videos":         renderVideosView();        break;
+    case "people":         renderPeopleView();        break;
+    case "more-like-this": renderMoreLikeThisView();  break;
+    default:               renderOverviewView();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAPA API TMDB
+// ─────────────────────────────────────────────────────────────────────────────
 async function tmdbGet(endpoint, params = {}) {
   const url = new URL(TMDB_BASE_URL + endpoint);
   url.searchParams.set("api_key", TMDB_API_KEY);
   url.searchParams.set("language", DEFAULT_LANGUAGE);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, value);
-    }
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
   });
 
   try {
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error("Recurso no encontrado (404).");
-      }
-      throw new Error(`Error en la petición (${response.status}).`);
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      throw new Error(res.status === 404
+        ? "Recurso no encontrado (404)."
+        : `Error en la petición (${res.status}).`
+      );
     }
-    return await response.json();
-  } catch (error) {
-    console.error(error);
-    showMessage(error.message || "Error de red al llamar a la API.", "error");
-    throw error;
+    return await res.json();
+  } catch (err) {
+    console.error(err);
+    showMessage(err.message || "Error de red al llamar a la API.", "error");
+    throw err;
   }
 }
 
+// ── Funciones de caché (lazy) ─────────────────────────────────────────────────
 async function ensureTvDetailsAndCredits() {
   if (!tvDetailsCache || !creditsCache) {
-    const [details, credits] = await Promise.all([
+    const [d, c] = await Promise.all([
       tmdbGet(`/tv/${NUESTRO_PLANETA_TV_ID}`),
       tmdbGet(`/tv/${NUESTRO_PLANETA_TV_ID}/credits`),
     ]);
-    tvDetailsCache = details;
-    creditsCache = credits;
+    tvDetailsCache = d;
+    creditsCache   = c;
   }
   return { tvDetails: tvDetailsCache, credits: creditsCache };
 }
@@ -136,354 +250,263 @@ async function ensureGenresList() {
   return genresListCache;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HERO
+// ─────────────────────────────────────────────────────────────────────────────
 async function loadHero() {
   try {
     const { tvDetails } = await ensureTvDetailsAndCredits();
 
-    const backdropUrl = tvDetails.backdrop_path
-      ? `${TMDB_BACKDROP_BASE}${tvDetails.backdrop_path}`
-      : null;
-
-    if (backdropUrl) {
-      heroEl.style.backgroundImage = `url(${backdropUrl})`;
+    if (tvDetails.backdrop_path) {
+      heroEl.style.backgroundImage = `url(${TMDB_BACKDROP_BASE}${tvDetails.backdrop_path})`;
     }
 
-    const year = tvDetails.first_air_date?.slice(0, 4) || "s/f";
-    const seasons = tvDetails.number_of_seasons ?? 0;
+    const year     = tvDetails.first_air_date?.slice(0, 4) || "s/f";
+    const seasons  = tvDetails.number_of_seasons  ?? 0;
     const episodes = tvDetails.number_of_episodes ?? 0;
-    const vote = tvDetails.vote_average?.toFixed(1) ?? "N/A";
+    const vote     = tvDetails.vote_average?.toFixed(1) ?? "N/A";
 
-    heroMetaEl.textContent = `${year} · ${seasons} temporada(s) · ${episodes} episodios · Puntuación TMDB: ${vote}`;
-
-    heroOverviewEl.textContent =
-      tvDetails.overview ||
-      "Sin sinopsis disponible en español para esta serie.";
-  } catch {
-  }
+    heroMetaEl.textContent = `${year}  ·  ${seasons} temporada${seasons !== 1 ? "s" : ""}  ·  ${episodes} episodios  ·  ★ ${vote}`;
+    heroOverviewEl.textContent = tvDetails.overview || "Sin sinopsis disponible en español.";
+  } catch { /* el hero queda en blanco si falla */ }
 }
 
-function changeView(view) {
-  setActiveNav(view);
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILIDADES UI
+// ─────────────────────────────────────────────────────────────────────────────
+function showMessage(text, type = "info") {
   messagesEl.innerHTML = "";
-  formContainer.innerHTML = "";
-  clearResults();
-
-  switch (view) {
-    case "overview":
-      renderOverviewView();
-      break;
-    case "seasons":
-      renderSeasonsView();
-      break;
-    case "gallery":
-      renderGalleryView();
-      break;
-    case "videos":
-      renderVideosView();
-      break;
-    case "people":
-      renderPeopleView();
-      break;
-    case "more-like-this":
-      renderMoreLikeThisView();
-      break;
-    default:
-      renderOverviewView();
-  }
+  if (!text) return;
+  const div = document.createElement("div");
+  div.className = `alert alert-${type}`;
+  div.textContent = text;
+  messagesEl.appendChild(div);
 }
 
-async function renderOverviewView() {
-  formContainer.innerHTML = `
-    <div class="form-header">
-      <div>
-        <h2>Información general</h2>
-        <p>Ficha principal de la serie documental "Nuestro planeta".</p>
-      </div>
-    </div>
-  `;
+function clearResults() { resultsEl.innerHTML = ""; }
 
+function makeSectionHeader(title, subtitle) {
+  const wrap = document.createElement("div");
+  wrap.className = "section-header";
+  const h = document.createElement("h2");
+  h.textContent = title;
+  wrap.appendChild(h);
+  if (subtitle) {
+    const p = document.createElement("p");
+    p.textContent = subtitle;
+    wrap.appendChild(p);
+  }
+  return wrap;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VISTA: INFORMACIÓN GENERAL
+// ─────────────────────────────────────────────────────────────────────────────
+async function renderOverviewView() {
+  formContainer.appendChild(
+    makeSectionHeader("Información general", "Ficha completa de la serie documental «Nuestro Planeta».")
+  );
   clearResults();
 
   try {
     const { tvDetails, credits } = await ensureTvDetailsAndCredits();
     const genresList = await ensureGenresList();
 
-    const container = document.createElement("article");
-    container.className = "card";
+    // ── Tarjeta principal ──────────────────────────────────────────────────
+    const card = document.createElement("article");
+    card.className = "detail-card";
 
-    const posterUrl = tvDetails.poster_path
-      ? `${TMDB_IMAGE_BASE}${tvDetails.poster_path}`
-      : null;
-
+    // Columna izquierda: póster
     const left = document.createElement("div");
-    if (posterUrl) {
+    if (tvDetails.poster_path) {
       const img = document.createElement("img");
-      img.src = posterUrl;
+      img.src = `${TMDB_IMAGE_BASE}${tvDetails.poster_path}`;
       img.alt = tvDetails.name;
-      img.className = "poster";
+      img.className = "detail-poster";
       left.appendChild(img);
     }
 
+    // Columna derecha: datos
     const right = document.createElement("div");
-    right.className = "card-body";
+    right.className = "detail-body";
 
-    const title = document.createElement("h3");
+    const title = document.createElement("h2");
+    title.className = "detail-title";
     title.textContent = `${tvDetails.name} (${tvDetails.first_air_date?.slice(0, 4) || "s/f"})`;
 
     const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = `Puntuación TMDB: ${tvDetails.vote_average?.toFixed(1) ?? "N/A"} · ${tvDetails.number_of_seasons} temporadas · ${tvDetails.number_of_episodes} episodios`;
+    meta.className = "detail-meta";
+    meta.textContent = `★ ${tvDetails.vote_average?.toFixed(1) ?? "N/A"}  ·  ${tvDetails.number_of_seasons} temporadas  ·  ${tvDetails.number_of_episodes} episodios`;
 
-    const badges = document.createElement("div");
-    if (tvDetails.genres?.length) {
-      tvDetails.genres.forEach((g) => {
-        const span = document.createElement("span");
-        span.className = "badge";
-        span.textContent = g.name;
-        badges.appendChild(span);
-      });
-    }
+    // Badges de géneros
+    const badgeRow = document.createElement("div");
+    badgeRow.className = "badge-row";
+    (tvDetails.genres || []).forEach((g) => {
+      const span = document.createElement("span");
+      span.className = "badge";
+      span.textContent = g.name;
+      badgeRow.appendChild(span);
+    });
 
     const overview = document.createElement("p");
-    overview.className = "overview";
-    overview.textContent =
-      tvDetails.overview ||
-      "Sin sinopsis disponible en español para esta serie.";
+    overview.className = "detail-overview";
+    overview.textContent = tvDetails.overview || "Sin sinopsis disponible en español.";
 
-    const twoCol = document.createElement("div");
-    twoCol.className = "two-columns";
+    // Grid de info en dos columnas
+    const infoGrid = document.createElement("div");
+    infoGrid.className = "info-grid";
 
-    const basicCard = document.createElement("div");
-    const basicTitle = document.createElement("div");
-    basicTitle.className = "section-title";
-    basicTitle.textContent = "Detalles básicos";
-    const basicList = document.createElement("ul");
-    basicList.className = "list";
+    // Bloque 1: detalles básicos
+    infoGrid.appendChild(makeInfoBlock("Detalles", [
+      { label: "Estado",           value: tvDetails.status || "Desconocido" },
+      { label: "País de origen",   value: (tvDetails.origin_country || []).join(", ") || "N/D" },
+      { label: "Idioma original",  value: tvDetails.original_language?.toUpperCase() || "N/D" },
+      { label: "Cadena(s)",        value: (tvDetails.networks || []).map((n) => n.name).join(", ") || "N/D" },
+    ]));
 
-    basicList.innerHTML = `
-      <li><strong>Estado:</strong> ${tvDetails.status || "Desconocido"}</li>
-      <li><strong>País de origen:</strong> ${(tvDetails.origin_country || []).join(", ") || "N/D"}</li>
-      <li><strong>Idioma original:</strong> ${tvDetails.original_language || "N/D"}</li>
-      <li><strong>Cadena(s):</strong> ${(tvDetails.networks || []).map((n) => n.name).join(", ") || "N/D"}</li>
-    `;
+    // Bloque 2: géneros TMDB
+    const genreItems = (genresList || []).map((g) => ({
+      label: `${g.id}`,
+      value: g.name,
+      highlight: tvDetails.genres?.some((sg) => sg.id === g.id),
+    }));
+    infoGrid.appendChild(makeInfoBlock("Géneros TMDB", genreItems));
 
-    basicCard.appendChild(basicTitle);
-    basicCard.appendChild(basicList);
+    // Bloque 3: reparto
+    const castItems = (credits.cast || []).slice(0, 6).map((p) => ({
+      label: p.name, value: p.character || "—",
+    }));
+    infoGrid.appendChild(makeInfoBlock("Reparto principal", castItems));
 
-    const genresCard = document.createElement("div");
-    const genresTitle = document.createElement("div");
-    genresTitle.className = "section-title";
-    genresTitle.textContent = "Géneros en TMDB";
-    const genresListEl = document.createElement("ul");
-    genresListEl.className = "list";
-
-    (genresList || []).forEach((genre) => {
-      const li = document.createElement("li");
-      const isOfShow = tvDetails.genres?.some((g) => g.id === genre.id);
-      li.textContent = `${genre.id} — ${genre.name}${isOfShow ? " (pertenece a la serie)" : ""}`;
-      genresListEl.appendChild(li);
-    });
-
-    genresCard.appendChild(genresTitle);
-    genresCard.appendChild(genresListEl);
-
-    twoCol.appendChild(basicCard);
-    twoCol.appendChild(genresCard);
-
-    const peopleCard = document.createElement("div");
-    peopleCard.className = "two-columns";
-
-    const castCard = document.createElement("div");
-    const castTitle = document.createElement("div");
-    castTitle.className = "section-title";
-    castTitle.textContent = "Reparto principal";
-    const castList = document.createElement("ul");
-    castList.className = "list";
-
-    (credits.cast || []).slice(0, 6).forEach((person) => {
-      const li = document.createElement("li");
-      li.textContent = `${person.name} — ${person.character}`;
-      castList.appendChild(li);
-    });
-
-    castCard.appendChild(castTitle);
-    castCard.appendChild(castList);
-
-    const crewCard = document.createElement("div");
-    const crewTitle = document.createElement("div");
-    crewTitle.className = "section-title";
-    crewTitle.textContent = "Equipo creativo";
-    const crewList = document.createElement("ul");
-    crewList.className = "list";
-
-    (credits.crew || [])
+    // Bloque 4: equipo
+    const crewFiltered = (credits.crew || [])
       .filter((c) => ["Director", "Writer", "Producer", "Narrator"].includes(c.job))
-      .slice(0, 6)
-      .forEach((person) => {
-        const li = document.createElement("li");
-        li.textContent = `${person.name} — ${person.job}`;
-        crewList.appendChild(li);
-      });
-
-    if (!crewList.children.length) {
-      const li = document.createElement("li");
-      li.textContent = "No hay información destacada de equipo creativo.";
-      crewList.appendChild(li);
-    }
-
-    crewCard.appendChild(crewTitle);
-    crewCard.appendChild(crewList);
-
-    peopleCard.appendChild(castCard);
-    peopleCard.appendChild(crewCard);
+      .slice(0, 6);
+    const crewItems = crewFiltered.length
+      ? crewFiltered.map((p) => ({ label: p.name, value: p.job }))
+      : [{ label: "—", value: "Sin datos de equipo creativo" }];
+    infoGrid.appendChild(makeInfoBlock("Equipo creativo", crewItems));
 
     right.appendChild(title);
     right.appendChild(meta);
-    right.appendChild(badges);
+    right.appendChild(badgeRow);
     right.appendChild(overview);
-    right.appendChild(twoCol);
-    right.appendChild(peopleCard);
-
-    container.appendChild(left);
-    container.appendChild(right);
-
-    resultsEl.appendChild(container);
-  } catch {
-  }
+    right.appendChild(infoGrid);
+    card.appendChild(left);
+    card.appendChild(right);
+    resultsEl.appendChild(card);
+  } catch { /* errores mostrados en tmdbGet */ }
 }
 
+function makeInfoBlock(title, items) {
+  const wrap = document.createElement("div");
+  wrap.className = "info-block";
+
+  const t = document.createElement("div");
+  t.className = "info-block__title";
+  t.textContent = title;
+  wrap.appendChild(t);
+
+  const ul = document.createElement("ul");
+  ul.className = "info-list";
+  items.forEach(({ label, value, highlight }) => {
+    const li = document.createElement("li");
+    if (highlight) li.classList.add("is-match");
+    li.innerHTML = `<strong>${label}</strong> — ${value}`;
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  return wrap;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VISTA: TEMPORADAS Y EPISODIOS
+// ─────────────────────────────────────────────────────────────────────────────
 async function renderSeasonsView() {
   try {
     const { tvDetails } = await ensureTvDetailsAndCredits();
 
-    const seasonsOptions = (tvDetails.seasons || [])
+    const options = (tvDetails.seasons || [])
       .filter((s) => s.season_number !== 0)
-      .map(
-        (s) =>
-          `<option value="${s.season_number}">Temporada ${s.season_number} — ${s.episode_count} episodios</option>`
-      )
+      .map((s) => `<option value="${s.season_number}">Temporada ${s.season_number} — ${s.episode_count} ep.</option>`)
       .join("");
 
-    formContainer.innerHTML = `
-      <div class="form-header">
-        <div>
-          <h2>Temporadas y episodios</h2>
-          <p>Explora los episodios de cada temporada de "Nuestro planeta".</p>
-        </div>
-      </div>
-      <div class="form-grid">
+    const wrap = document.createElement("div");
+    wrap.appendChild(makeSectionHeader("Temporadas y episodios", "Explora los episodios de cada temporada."));
+    wrap.innerHTML += `
+      <div class="form-row" style="margin-top:0.75rem">
         <div class="form-field">
           <label for="seasonNumber">Temporada</label>
-          <select id="seasonNumber">
-            <option value="">Selecciona una temporada</option>
-            ${seasonsOptions}
-          </select>
+          <select id="seasonNumber">${options}</select>
         </div>
-        <div class="form-actions">
+        <div style="padding-top:1.4rem">
           <button id="loadSeasonBtn" class="btn btn-primary">Ver episodios</button>
         </div>
       </div>
     `;
+    formContainer.appendChild(wrap);
 
     document.getElementById("loadSeasonBtn").addEventListener("click", async () => {
-      const seasonNumber = document.getElementById("seasonNumber").value.trim();
-      if (!seasonNumber) return;
-      await loadSeason(seasonNumber);
+      const n = document.getElementById("seasonNumber").value;
+      if (n) await loadSeason(n);
     });
 
-    if (tvDetails.number_of_seasons >= 1) {
-      await loadSeason(1);
-    } else {
-      clearResults();
-    }
-  } catch {
-  }
+    if (tvDetails.number_of_seasons >= 1) await loadSeason(1);
+    else clearResults();
+  } catch { }
 }
 
-async function loadSeason(seasonNumber) {
+async function loadSeason(n) {
   clearResults();
   try {
-    const season = await tmdbGet(
-      `/tv/${NUESTRO_PLANETA_TV_ID}/season/${seasonNumber}`
-    );
+    const season = await tmdbGet(`/tv/${NUESTRO_PLANETA_TV_ID}/season/${n}`);
     renderSeason(season);
-  } catch {
-  }
+  } catch { }
 }
 
 function renderSeason(season) {
-  const headerCard = document.createElement("article");
-  headerCard.className = "card card-compact";
-
-  const body = document.createElement("div");
-  body.className = "card-body";
-
-  const title = document.createElement("h3");
-  title.textContent = `${season.name || "Temporada"} · ${season.season_number}`;
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-  meta.textContent = `Episodios: ${season.episodes?.length ?? 0}`;
-
-  const overview = document.createElement("p");
-  overview.className = "overview";
-  overview.textContent =
-    season.overview ||
-    "Sin descripción disponible para esta temporada en este idioma.";
-
-  body.appendChild(title);
-  body.appendChild(meta);
-  body.appendChild(overview);
-  headerCard.appendChild(body);
-  resultsEl.appendChild(headerCard);
+  // Cabecera de la temporada
+  const header = document.createElement("div");
+  header.className = "season-header";
+  header.innerHTML = `
+    <h3>${season.name || "Temporada"} ${season.season_number}</h3>
+    <div class="meta">${season.episodes?.length ?? 0} episodios</div>
+    <p class="overview">${season.overview || "Sin descripción disponible."}</p>
+  `;
+  resultsEl.appendChild(header);
 
   if (!season.episodes?.length) return;
 
-  const episodesGrid = document.createElement("div");
-  episodesGrid.className = "episodes-grid";
+  const grid = document.createElement("div");
+  grid.className = "episodes-grid";
 
-  season.episodes.forEach((ep) => {
-    const epCard = document.createElement("div");
-    epCard.className = "episode-card";
-
-    const header = document.createElement("div");
-    header.className = "episode-header";
-    const titleEl = document.createElement("div");
-    titleEl.className = "episode-title";
-    titleEl.textContent = `${ep.episode_number}. ${ep.name}`;
-    const airEl = document.createElement("div");
-    airEl.className = "meta";
-    airEl.textContent = ep.air_date || "Fecha no disponible";
-    header.appendChild(titleEl);
-    header.appendChild(airEl);
-
-    const overviewEl = document.createElement("div");
-    overviewEl.textContent =
-      ep.overview || "Sin sinopsis disponible para este episodio.";
-
-    epCard.appendChild(header);
-    epCard.appendChild(overviewEl);
-
-    episodesGrid.appendChild(epCard);
+  season.episodes.forEach((ep, i) => {
+    const card = document.createElement("div");
+    card.className = "episode-card";
+    card.style.animationDelay = `${i * 0.04}s`;
+    card.innerHTML = `
+      <div class="episode-number">EP. ${String(ep.episode_number).padStart(2, "0")}</div>
+      <div class="episode-title">${ep.name}</div>
+      <div class="episode-date">${ep.air_date || "Fecha desconocida"}</div>
+      <div class="episode-overview">${ep.overview || "Sin sinopsis disponible."}</div>
+    `;
+    grid.appendChild(card);
   });
 
-  resultsEl.appendChild(episodesGrid);
+  resultsEl.appendChild(grid);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// VISTA: GALERÍA
+// ─────────────────────────────────────────────────────────────────────────────
 async function renderGalleryView() {
-  formContainer.innerHTML = `
-    <div class="form-header">
-      <div>
-        <h2>Galería de imágenes</h2>
-        <p>Backdrops y fotografías oficiales de la serie en TMDB.</p>
-      </div>
-    </div>
-  `;
-
+  formContainer.appendChild(
+    makeSectionHeader("Galería de imágenes", "Backdrops oficiales de la serie en TMDB.")
+  );
   clearResults();
 
   try {
-    const images = await ensureImages();
+    const images   = await ensureImages();
     const backdrops = images.backdrops || [];
 
     if (!backdrops.length) {
@@ -491,86 +514,68 @@ async function renderGalleryView() {
       return;
     }
 
-    const row = document.createElement("section");
-    row.className = "row";
-
-    const title = document.createElement("h3");
-    title.className = "row-title";
-    title.textContent = "Imágenes destacadas";
+    const label = document.createElement("div");
+    label.className = "row-label";
+    label.textContent = `${Math.min(backdrops.length, 20)} imágenes destacadas`;
+    resultsEl.appendChild(label);
 
     const scroller = document.createElement("div");
-    scroller.className = "row-scroller";
+    scroller.className = "gallery-scroller";
 
     backdrops.slice(0, 20).forEach((img) => {
-      const card = document.createElement("article");
-      card.className = "poster-card";
-
-      const imageEl = document.createElement("img");
-      imageEl.className = "poster-img";
-      imageEl.src = `${TMDB_BACKDROP_BASE}${img.file_path}`;
-      imageEl.alt = "Imagen de la serie";
-
-      card.appendChild(imageEl);
+      const card = document.createElement("div");
+      card.className = "gallery-card";
+      const image = document.createElement("img");
+      image.className = "gallery-img";
+      image.src  = `${TMDB_BACKDROP_BASE}${img.file_path}`;
+      image.alt  = "Imagen de la serie";
+      image.loading = "lazy";
+      card.appendChild(image);
       scroller.appendChild(card);
     });
 
-    row.appendChild(title);
-    row.appendChild(scroller);
-    resultsEl.appendChild(row);
-  } catch {
-  }
+    resultsEl.appendChild(scroller);
+  } catch { }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// VISTA: VÍDEOS
+// ─────────────────────────────────────────────────────────────────────────────
 async function renderVideosView() {
-  formContainer.innerHTML = `
-    <div class="form-header">
-      <div>
-        <h2>Tráilers y vídeos</h2>
-        <p>Vídeos oficiales de "Nuestro planeta" disponibles en TMDB (YouTube).</p>
-      </div>
-    </div>
-  `;
-
+  formContainer.appendChild(
+    makeSectionHeader("Tráilers y vídeos", "Vídeos oficiales de «Nuestro Planeta» en TMDB (YouTube).")
+  );
   clearResults();
 
   try {
-    const videos = await ensureVideos();
-    const youtubeVideos = (videos.results || []).filter(
-      (v) => v.site === "YouTube"
-    );
+    const videos       = await ensureVideos();
+    const youtubeVids  = (videos.results || []).filter((v) => v.site === "YouTube");
 
-    if (!youtubeVideos.length) {
+    if (!youtubeVids.length) {
       showMessage("No hay vídeos disponibles para esta serie.", "info");
       return;
     }
 
-    const grid = document.createElement("section");
+    const grid = document.createElement("div");
     grid.className = "video-grid";
 
-    youtubeVideos.slice(0, 6).forEach((video) => {
+    youtubeVids.slice(0, 6).forEach((video, i) => {
       const card = document.createElement("article");
       card.className = "video-card";
+      card.style.animationDelay = `${i * 0.07}s`;
 
       const iframe = document.createElement("iframe");
       iframe.src = `https://www.youtube.com/embed/${video.key}`;
       iframe.title = video.name;
-      iframe.allow =
-        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
       iframe.allowFullscreen = true;
 
       const body = document.createElement("div");
       body.className = "video-body";
-
-      const titleEl = document.createElement("div");
-      titleEl.className = "section-title";
-      titleEl.textContent = video.name;
-
-      const meta = document.createElement("div");
-      meta.className = "meta";
-      meta.textContent = `${video.type || "Vídeo"} · ${video.published_at?.slice(0, 10) || "Fecha desconocida"}`;
-
-      body.appendChild(titleEl);
-      body.appendChild(meta);
+      body.innerHTML = `
+        <div class="video-title">${video.name}</div>
+        <div class="video-meta">${video.type || "Vídeo"}  ·  ${video.published_at?.slice(0, 10) || "Fecha desconocida"}</div>
+      `;
 
       card.appendChild(iframe);
       card.appendChild(body);
@@ -578,83 +583,68 @@ async function renderVideosView() {
     });
 
     resultsEl.appendChild(grid);
-  } catch {
-  }
+  } catch { }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// VISTA: REPARTO Y EQUIPO
+// ─────────────────────────────────────────────────────────────────────────────
 async function renderPeopleView() {
-  formContainer.innerHTML = `
-    <div class="form-header">
-      <div>
-        <h2>Reparto y equipo</h2>
-        <p>Personas que participan en la serie. Haz clic para ver más detalles.</p>
-      </div>
-    </div>
-  `;
-
+  formContainer.appendChild(
+    makeSectionHeader("Reparto y equipo", "Haz clic en cualquier persona para ver su ficha completa.")
+  );
   clearResults();
 
   try {
     const { credits } = await ensureTvDetailsAndCredits();
 
-    const grid = document.createElement("section");
-    grid.className = "person-grid";
-
-    const mainPeople = [
+    const people = [
       ...(credits.cast || []).slice(0, 8),
       ...(credits.crew || [])
-        .filter((c) =>
-          ["Director", "Writer", "Producer", "Narrator"].includes(c.job)
-        )
+        .filter((c) => ["Director", "Writer", "Producer", "Narrator"].includes(c.job))
         .slice(0, 8),
     ];
 
-    if (!mainPeople.length) {
+    if (!people.length) {
       showMessage("No hay información de reparto o equipo disponible.", "info");
       return;
     }
 
-    mainPeople.forEach((person) => {
+    const grid = document.createElement("div");
+    grid.className = "person-grid";
+
+    people.forEach((person, i) => {
       const card = document.createElement("article");
-      card.className = "poster-card";
+      card.className = "person-card";
+      card.style.animationDelay = `${i * 0.04}s`;
       card.dataset.personId = person.id;
 
-      const profileUrl = person.profile_path
-        ? `${TMDB_IMAGE_BASE}${person.profile_path}`
-        : null;
-
-      if (profileUrl) {
+      if (person.profile_path) {
         const img = document.createElement("img");
-        img.className = "poster-img";
-        img.src = profileUrl;
-        img.alt = person.name;
+        img.className = "person-photo";
+        img.src  = `${TMDB_IMAGE_BASE}${person.profile_path}`;
+        img.alt  = person.name;
+        img.loading = "lazy";
         card.appendChild(img);
+      } else {
+        const ph = document.createElement("div");
+        ph.className = "person-photo skeleton";
+        card.appendChild(ph);
       }
 
-      const body = document.createElement("div");
-      body.className = "poster-body";
-
-      const title = document.createElement("div");
-      title.className = "poster-title";
-      title.textContent = person.name;
-
-      const meta = document.createElement("div");
-      meta.className = "poster-meta";
-      meta.textContent =
-        person.character || person.job || "Participación en la serie";
-
-      body.appendChild(title);
-      body.appendChild(meta);
-      card.appendChild(body);
-
+      const info = document.createElement("div");
+      info.className = "person-info";
+      info.innerHTML = `
+        <div class="person-name">${person.name}</div>
+        <div class="person-role">${person.character || person.job || "Participación"}</div>
+      `;
+      card.appendChild(info);
       card.addEventListener("click", () => loadPersonDetail(person.id));
-
       grid.appendChild(card);
     });
 
     resultsEl.appendChild(grid);
-  } catch {
-  }
+  } catch { }
 }
 
 async function loadPersonDetail(personId) {
@@ -665,63 +655,49 @@ async function loadPersonDetail(personId) {
       peopleCache.set(personId, person);
     }
     renderPersonDetail(person);
-  } catch {
-  }
+  } catch { }
 }
 
 function renderPersonDetail(person) {
-  const card = document.createElement("article");
-  card.className = "card card-compact";
+  // Elimina ficha anterior si existe
+  resultsEl.querySelector(".person-detail")?.remove();
 
-  const profileUrl = person.profile_path
-    ? `${TMDB_IMAGE_BASE}${person.profile_path}`
-    : null;
+  const card = document.createElement("article");
+  card.className = "person-detail";
 
   const left = document.createElement("div");
-  if (profileUrl) {
+  if (person.profile_path) {
     const img = document.createElement("img");
-    img.src = profileUrl;
+    img.src = `${TMDB_IMAGE_BASE}${person.profile_path}`;
     img.alt = person.name;
-    img.className = "poster";
+    img.className = "person-detail__photo";
     left.appendChild(img);
   }
 
   const right = document.createElement("div");
-  right.className = "card-body";
-
-  const title = document.createElement("h3");
-  title.textContent = person.name;
-
-  const meta = document.createElement("div");
-  meta.className = "meta";
-  meta.textContent = `Conocido por: ${person.known_for_department || "N/D"} · Lugar de nacimiento: ${person.place_of_birth || "No disponible"} · Nacimiento: ${person.birthday || "N/D"}`;
-
-  const overview = document.createElement("p");
-  overview.className = "overview";
-  overview.textContent =
-    person.biography ||
-    "No hay biografía disponible en español para esta persona.";
-
-  right.appendChild(title);
-  right.appendChild(meta);
-  right.appendChild(overview);
+  right.innerHTML = `
+    <div class="person-detail__name">${person.name}</div>
+    <div class="person-detail__meta">
+      ${person.known_for_department ? `Conocido por: ${person.known_for_department}<br/>` : ""}
+      ${person.birthday ? `Nacimiento: ${person.birthday}<br/>` : ""}
+      ${person.place_of_birth ? `Lugar: ${person.place_of_birth}` : ""}
+    </div>
+    <p class="person-detail__bio">${person.biography || "No hay biografía disponible en español para esta persona."}</p>
+  `;
 
   card.appendChild(left);
   card.appendChild(right);
-
   resultsEl.prepend(card);
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// VISTA: MÁS COMO ESTA
+// ─────────────────────────────────────────────────────────────────────────────
 async function renderMoreLikeThisView() {
-  formContainer.innerHTML = `
-    <div class="form-header">
-      <div>
-        <h2>Más como esta</h2>
-        <p>Documentales y series similares según los géneros de "Nuestro planeta".</p>
-      </div>
-    </div>
-  `;
-
+  formContainer.appendChild(
+    makeSectionHeader("Más como esta", "Series y documentales similares según los géneros de «Nuestro Planeta».")
+  );
   clearResults();
 
   try {
@@ -729,76 +705,57 @@ async function renderMoreLikeThisView() {
     const mainGenre = (tvDetails.genres || [])[0];
 
     if (!mainGenre) {
-      showMessage(
-        "La serie no tiene géneros asociados en TMDB, no se pueden buscar similares.",
-        "info"
-      );
+      showMessage("La serie no tiene géneros asociados en TMDB.", "info");
       return;
     }
 
-    const data = await tmdbGet("/discover/tv", {
+    const data    = await tmdbGet("/discover/tv", {
       with_genres: mainGenre.id,
-      sort_by: "popularity.desc",
+      sort_by:     "popularity.desc",
     });
-
-    const results = (data.results || []).filter(
-      (tv) => tv.id !== NUESTRO_PLANETA_TV_ID
-    );
+    const results = (data.results || []).filter((tv) => tv.id !== NUESTRO_PLANETA_TV_ID);
 
     if (!results.length) {
-      showMessage("No se encontraron otras series similares para mostrar.", "info");
+      showMessage("No se encontraron series similares.", "info");
       return;
     }
 
-    const row = document.createElement("section");
-    row.className = "row";
-
-    const title = document.createElement("h3");
-    title.className = "row-title";
-    title.textContent = `Más títulos del género "${mainGenre.name}"`;
+    const label = document.createElement("div");
+    label.className = "row-label";
+    label.textContent = `Más títulos del género "${mainGenre.name}"`;
+    resultsEl.appendChild(label);
 
     const scroller = document.createElement("div");
-    scroller.className = "row-scroller";
+    scroller.className = "poster-scroller";
 
     results.slice(0, 20).forEach((tv) => {
       const card = document.createElement("article");
       card.className = "poster-card";
 
-      const posterUrl = tv.poster_path
-        ? `${TMDB_IMAGE_BASE}${tv.poster_path}`
-        : null;
-
-      if (posterUrl) {
+      if (tv.poster_path) {
         const img = document.createElement("img");
         img.className = "poster-img";
-        img.src = posterUrl;
-        img.alt = tv.name;
+        img.src  = `${TMDB_IMAGE_BASE}${tv.poster_path}`;
+        img.alt  = tv.name;
+        img.loading = "lazy";
         card.appendChild(img);
       }
 
       const body = document.createElement("div");
       body.className = "poster-body";
-
-      const titleEl = document.createElement("div");
-      titleEl.className = "poster-title";
-      titleEl.textContent = tv.name;
-
-      const meta = document.createElement("div");
-      meta.className = "poster-meta";
-      meta.textContent = `Puntuación: ${tv.vote_average?.toFixed(1) ?? "N/A"}`;
-
-      body.appendChild(titleEl);
-      body.appendChild(meta);
-
+      body.innerHTML = `
+        <div class="poster-title">${tv.name}</div>
+        <div class="poster-score">★ ${tv.vote_average?.toFixed(1) ?? "N/A"}</div>
+      `;
       card.appendChild(body);
       scroller.appendChild(card);
     });
 
-    row.appendChild(title);
-    row.appendChild(scroller);
-    resultsEl.appendChild(row);
-  } catch {
-  }
+    resultsEl.appendChild(scroller);
+  } catch { }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ARRANQUE
+// ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", init);

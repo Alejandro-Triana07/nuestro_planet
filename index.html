@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nuestro planeta - Explorador TMDB</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <h1>NUESTRO PLANETA</h1>
+        <p class="subtitle">
+          Explorador TMDB
+          <strong>"Nuestro planeta"</strong>.
+        </p>
+      </div>
+      <div class="header-controls">
+        <div class="api-key-input">
+          <label for="apiKey">API Key TMDB:</label>
+          <input
+            type="password"
+            id="apiKey"
+            placeholder="Introduce tu API Key de TMDB"
+          />
+          <button id="saveApiKeyBtn">Guardar</button>
+        </div>
+        <button id="themeToggleBtn" class="theme-toggle">Modo neón</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section id="hero" class="hero">
+        <!-- El fondo, título y datos principales de la serie se cargan dinámicamente desde TMDB -->
+        <div class="hero-overlay">
+          <div class="hero-content">
+            <p class="hero-tagline">Una sola serie. Un planeta completo.</p>
+            <h2 class="hero-title">Nuestro planeta</h2>
+            <p class="hero-meta" id="heroMeta"></p>
+            <p class="hero-overview" id="heroOverview"></p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" data-view="overview">
+                Ver información general
+              </button>
+              <button class="btn btn-secondary" data-view="seasons">
+                Ver temporadas y episodios
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="main-content">
+        <nav class="main-menu">
+          <button data-view="overview" class="nav-btn">
+            Información general
+          </button>
+          <button data-view="seasons" class="nav-btn">
+            Temporadas y episodios
+          </button>
+          <button data-view="gallery" class="nav-btn">
+            Galería de imágenes
+          </button>
+          <button data-view="videos" class="nav-btn">
+            Tráilers y vídeos
+          </button>
+          <button data-view="people" class="nav-btn">
+            Reparto y equipo
+          </button>
+          <button data-view="more-like-this" class="nav-btn">
+            Más como esta
+          </button>
+        </nav>
+
+        <section id="messages" class="messages"></section>
+
+        <section id="formContainer" class="form-container"></section>
+
+        <section id="results" class="results"></section>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>
+        Ejercicio de programación - Uso de la API de TMDB - Serie "Nuestro planeta".
+      </p>
+    </footer>
+
+    <script src="main.js" defer></script>
+  </body>
+  </html>
+

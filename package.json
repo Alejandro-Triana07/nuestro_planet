@@ -1,0 +1,14 @@
+{
+  "name": "tmdb-nuestroplanet",
+  "version": "1.0.0",
+  "description": "Pequeña aplicación web para explorar la API de TMDB centrada en la serie \"ourt planet\".",
+  "keywords": [
+    "tmdb",
+    "api",
+    "series",
+    "mundo en guerra"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}

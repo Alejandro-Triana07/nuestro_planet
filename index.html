@@ -3,9 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ── PWA: tema y apariencia ──────────────────────────────────── -->
     <meta name="theme-color" content="#080c10" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nuestro Planeta" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- ── SEO / descripción ────────────────────────────────────────── -->
+    <meta name="description" content="Explorador de la serie documental Nuestro Planeta usando la API de TMDB. Temporadas, galería, vídeos, reparto y más." />
+    <meta name="application-name" content="Nuestro Planeta" />
+
+    <!-- ── PWA: Manifest ────────────────────────────────────────────── -->
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- ── PWA: Iconos Apple (Touch Icons) ──────────────────────────── -->
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
+
+    <!-- ── Favicon ──────────────────────────────────────────────────── -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+
     <title>Nuestro Planeta — Explorador TMDB</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -68,6 +87,13 @@
           </div>
         </div>
         <div class="header-right">
+          <!-- Banner de instalación PWA (oculto por defecto) -->
+          <button id="installBtn" class="btn btn-ghost pwa-install-btn" hidden title="Instalar app">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v13m0 0l-4-4m4 4l4-4M2 17v2a2 2 0 002 2h16a2 2 0 002-2v-2"/></svg>
+            Instalar
+          </button>
+          <!-- Indicador offline -->
+          <span id="offlineBadge" class="offline-badge" hidden>Sin conexión</span>
           <button id="themeToggleBtn" class="icon-btn" title="Cambiar tema">
             <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
             <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -130,5 +156,52 @@
     </div><!-- /appRoot -->
 
     <script src="main.js" defer></script>
+
+    <!-- ── Registro del Service Worker ──────────────────────────────── -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
+            .catch(err => console.warn('[PWA] Error al registrar el SW:', err));
+        });
+      }
+
+      // ── Botón de instalación (A2HS) ──────────────────────────────────
+      let deferredPrompt = null;
+      const installBtn   = document.getElementById('installBtn');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.hidden = false;
+      });
+
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('[PWA] Resultado instalación:', outcome);
+        deferredPrompt = null;
+        installBtn.hidden = true;
+      });
+
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] App instalada correctamente.');
+        installBtn.hidden = true;
+        deferredPrompt = null;
+      });
+
+      // ── Indicador de estado de conexión ─────────────────────────────
+      const offlineBadge = document.getElementById('offlineBadge');
+
+      function updateOnlineStatus() {
+        offlineBadge.hidden = navigator.onLine;
+      }
+
+      window.addEventListener('online',  updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+      updateOnlineStatus();
+    </script>
   </body>
 </html>

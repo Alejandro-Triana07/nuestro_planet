@@ -54,13 +54,33 @@ img{display:block}button{cursor:pointer;font-family:inherit}
   box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04);
   animation:gateIn .7s var(--ease-out) both}
 @keyframes gateIn{from{opacity:0;transform:translateY(32px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
-.api-gate__logo{margin:0 auto 1.25rem}
-.logo-mark{display:inline-flex;align-items:center;justify-content:center;
-  width:64px;height:64px;background:linear-gradient(135deg,var(--accent),var(--accent2));
-  color:#04070b;font-family:var(--font-display);font-size:1.5rem;letter-spacing:.05em;
-  border-radius:var(--radius);box-shadow:0 0 32px var(--accent-glow);overflow:hidden}
-.logo-mark img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
-.logo-mark--sm{width:38px;height:38px;font-size:.9rem;border-radius:var(--radius-sm);flex-shrink:0}
+.api-gate__logo{margin:0 auto 1.25rem;display:flex;justify-content:center}
+
+/* ── LOGO MARK — imagen real, sin texto ── */
+.logo-mark{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:64px;height:64px;
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:0 0 32px var(--accent-glow);
+  flex-shrink:0;
+  background:transparent;
+  padding:0;
+}
+.logo-mark img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  border-radius:inherit;
+}
+.logo-mark--sm{
+  width:38px;
+  height:38px;
+  border-radius:var(--radius-sm);
+  box-shadow:none;
+}
+
 .api-gate__title{font-family:var(--font-display);font-size:2.8rem;letter-spacing:.08em;
   color:var(--text);line-height:1;margin-bottom:.3rem}
 .api-gate__sub{font-size:.82rem;color:var(--text-3);text-transform:uppercase;
@@ -318,9 +338,9 @@ body.light .icon-sun{display:block} body.light .icon-moon{display:none}
 
 @media(max-width:359px){
   .api-gate__card{padding:1.5rem 1rem 1.25rem;border-radius:var(--radius)}
-  .api-gate__title{font-size:2rem}.logo-mark{width:48px;height:48px;font-size:1.1rem}
+  .api-gate__title{font-size:2rem}.logo-mark{width:48px;height:48px}
   .app-header{padding:.5rem .75rem;gap:.4rem}.brand-title{font-size:1rem}.brand-sub{display:none}
-  .logo-mark--sm{width:30px;height:30px;font-size:.75rem}
+  .logo-mark--sm{width:30px;height:30px}
   .hero{min-height:70vh}.hero-overlay{padding:0 .75rem 2.5rem}
   .hero-title{font-size:clamp(2.2rem,14vw,3rem);line-height:.92}
   .hero-eyebrow{font-size:.68rem}.hero-meta{font-size:.75rem}

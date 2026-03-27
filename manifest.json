@@ -22,14 +22,6 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "screenshots/hero.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "label": "Vista principal"
-    }
-  ],
   "categories": ["entertainment", "education"],
   "shortcuts": [
     {

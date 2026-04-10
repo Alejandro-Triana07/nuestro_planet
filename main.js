@@ -43,6 +43,32 @@ let genresListCache = null;
 const peopleCache   = new Map();
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MENSAJES DE ERROR AMIGABLES
+// ─────────────────────────────────────────────────────────────────────────────
+function friendlyErrorMessage(status) {
+  if (!navigator.onLine) {
+    return "Parece que no tienes conexión a Internet. Comprueba tu red e inténtalo de nuevo.";
+  }
+  switch (status) {
+    case 401:
+      return "Tu clave de acceso no es válida o ha caducado. Ve a ajustes y vuelve a introducirla.";
+    case 403:
+      return "No tienes permiso para ver este contenido. Comprueba que tu clave de acceso sea correcta.";
+    case 404:
+      return "No se encontró la información que buscabas. Es posible que ya no esté disponible.";
+    case 429:
+      return "Has hecho demasiadas peticiones seguidas. Espera unos segundos e inténtalo de nuevo.";
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return "El servidor de TMDB está teniendo problemas en este momento. Inténtalo más tarde.";
+    default:
+      return "Algo salió mal al cargar los datos. Comprueba tu conexión e inténtalo de nuevo.";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INICIALIZACIÓN
 // ─────────────────────────────────────────────────────────────────────────────
 function init() {
@@ -79,7 +105,7 @@ function init() {
 async function handleGateEnter() {
   const key = gateApiKeyEl.value.trim();
   if (!key) {
-    gateErrorEl.textContent = "Introduce una API Key antes de continuar.";
+    gateErrorEl.textContent = "Por favor, introduce tu clave de acceso antes de continuar.";
     gateErrorEl.hidden = false;
     return;
   }
@@ -101,7 +127,9 @@ async function handleGateEnter() {
       showApp();
     }, 500);
   } else {
-    gateErrorEl.textContent = "API Key inválida o error de conexión. Revísala e inténtalo de nuevo.";
+    gateErrorEl.textContent = navigator.onLine
+      ? "La clave de acceso no es válida. Revísala e inténtalo de nuevo."
+      : "No tienes conexión a Internet. Conéctate e inténtalo de nuevo.";
     gateErrorEl.hidden = false;
     gateEnterBtn.disabled = false;
     gateEnterBtn.querySelector("span").textContent = "Entrar";
@@ -200,15 +228,18 @@ async function tmdbGet(endpoint, params = {}) {
   try {
     const res = await fetch(url.toString());
     if (!res.ok) {
-      throw new Error(res.status === 404
-        ? "Recurso no encontrado (404)."
-        : `Error en la petición (${res.status}).`
-      );
+      const msg = friendlyErrorMessage(res.status);
+      throw new Error(msg);
     }
     return await res.json();
   } catch (err) {
+    // Si el error ya es uno nuestro (mensaje amigable), lo usamos tal cual.
+    // Si es un error de red nativo (TypeError: failed to fetch), lo traducimos.
+    const msg = (err instanceof TypeError)
+      ? friendlyErrorMessage(null)
+      : err.message;
     console.error(err);
-    showMessage(err.message || "Error de red al llamar a la API.", "error");
+    showMessage(msg, "error");
     throw err;
   }
 }
